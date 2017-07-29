@@ -23,7 +23,7 @@ namespace GradeMe3.StudentHome
         }
 
         [HttpPost("fetch")]
-        [AllowAnonymous]
+        [Authorize(Policy = GradeMePolicies.Student)]
         public IActionResult Fetch([FromBody] StudentHomeRequest request)
         {
             try
@@ -50,7 +50,7 @@ namespace GradeMe3.StudentHome
         }
 
         [HttpPost("evaluation-create")]
-        [AllowAnonymous]
+        [Authorize(Policy = GradeMePolicies.Student)]
         public IActionResult EvaluationCreate([FromBody] EvaluationCreateRequest request)
         {
             try

@@ -20,7 +20,7 @@ namespace GradeMe3.InstructorCourse
         }
 
         [HttpPost("fetch")]
-        [AllowAnonymous]
+        [Authorize(Policy = GradeMePolicies.Instructor)]
         public IActionResult Fetch([FromBody] CourseDataRequest request)
         {
             try
@@ -56,7 +56,7 @@ namespace GradeMe3.InstructorCourse
         // Projects
 
         [HttpPost("project-create")]
-        [AllowAnonymous]
+        [Authorize(Policy = GradeMePolicies.Instructor)]
         public IActionResult ProjectCreate([FromBody] ProjectCreateRequest request)
         {
             try
@@ -120,7 +120,7 @@ namespace GradeMe3.InstructorCourse
         }
 
         [HttpPost("project-update")]
-        [AllowAnonymous]
+        [Authorize(Policy = GradeMePolicies.Instructor)]
         public IActionResult ProjectUpdate([FromBody] ProjectCreateRequest request)
         {
             try
@@ -193,7 +193,7 @@ namespace GradeMe3.InstructorCourse
         }
 
         [HttpPost("project-delete")]
-        [AllowAnonymous]
+        [Authorize(Policy = GradeMePolicies.Instructor)]
         public IActionResult ProjectDelete([FromBody] ProjectDeleteRequest request)
         {
             try
@@ -243,7 +243,7 @@ namespace GradeMe3.InstructorCourse
         // Students
 
         [HttpPost("student-create")]            
-        [Authorize(Policy = GradeMePolicies.Administrator)]
+        [Authorize(Policy = GradeMePolicies.Instructor)]
         public IActionResult StudentCreate([FromBody] StudentCreateRequest request)
         {
             try
@@ -331,7 +331,7 @@ namespace GradeMe3.InstructorCourse
         }
 
         [HttpPost("student-update")]
-        [AllowAnonymous]
+        [Authorize(Policy = GradeMePolicies.Instructor)]
         public IActionResult StudentUpdate([FromBody] StudentCreateRequest request)
         {
             try
@@ -400,7 +400,7 @@ namespace GradeMe3.InstructorCourse
         }
 
         [HttpPost("student-delete")]
-        [AllowAnonymous]
+        [Authorize(Policy = GradeMePolicies.Instructor)]
         public IActionResult StudentDelete([FromBody] StudentDeleteRequest request)
         {
             try
@@ -467,7 +467,7 @@ namespace GradeMe3.InstructorCourse
 
         // Instructors
         [HttpPost("instructor-create")]
-        [AllowAnonymous]
+        [Authorize(Policy = GradeMePolicies.Instructor)]
         public IActionResult InstructorCreate([FromBody] InstructorCreateRequest request)
         {
             try
@@ -527,7 +527,10 @@ namespace GradeMe3.InstructorCourse
                         catch (Exception transExc)
                         {
                             transaction.Rollback();
-                            return new BadRequestObjectResult(transExc);
+                            return new BadRequestObjectResult(new CourseData()
+                            {
+                                ErrorMessage = "Failed to add instructor.\n" + transExc.Message
+                            });
                         }
                     }
                 }
@@ -539,7 +542,7 @@ namespace GradeMe3.InstructorCourse
         }
 
         [HttpPost("instructor-update")]
-        [AllowAnonymous]
+        [Authorize(Policy = GradeMePolicies.Instructor)]
         public IActionResult InstructorUpdate([FromBody] InstructorCreateRequest request)
         {
             try
@@ -608,7 +611,7 @@ namespace GradeMe3.InstructorCourse
         }
 
         [HttpPost("instructor-delete")]
-        [AllowAnonymous]
+        [Authorize(Policy = GradeMePolicies.Instructor)]
         public IActionResult InstructorDelete([FromBody] InstructorDeleteRequest request)
         {
             try

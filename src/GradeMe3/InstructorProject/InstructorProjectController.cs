@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using GradeMe3.Students;
 using GradeMe3.Teams;
 using System.Text;
+using GradeMe3.Evaluations;
 
 namespace GradeMe3.InstructorProject
 {
@@ -22,7 +23,7 @@ namespace GradeMe3.InstructorProject
         }
 
         [HttpPost("fetch")]
-        [AllowAnonymous]
+        [Authorize(Policy = GradeMePolicies.Instructor)]
         public IActionResult Fetch([FromBody] ProjectDataRequest request)
         {
             try
@@ -58,7 +59,7 @@ namespace GradeMe3.InstructorProject
         // Students
 
         [HttpPost("student-create")]
-        [AllowAnonymous]
+        [Authorize(Policy = GradeMePolicies.Instructor)]
         public IActionResult StudentCreate([FromBody] StudentCreateRequest request)
         {
             try
@@ -203,7 +204,7 @@ namespace GradeMe3.InstructorProject
         }
 
         [HttpPost("student-update")]
-        [AllowAnonymous]
+        [Authorize(Policy = GradeMePolicies.Instructor)]
         public IActionResult StudentUpdate([FromBody] StudentCreateRequest request)
         {
             try
@@ -296,7 +297,7 @@ namespace GradeMe3.InstructorProject
         }
 
         [HttpPost("student-delete")]
-        [AllowAnonymous]
+        [Authorize(Policy = GradeMePolicies.Instructor)]
         public IActionResult StudentDelete([FromBody] StudentDeleteRequest request)
         {
             try
@@ -364,7 +365,7 @@ namespace GradeMe3.InstructorProject
         // Teams
 
         [HttpPost("team-create")]
-        [AllowAnonymous]
+        [Authorize(Policy = GradeMePolicies.Instructor)]
         public IActionResult TeamCreate([FromBody] TeamCreateRequest request)
         {
             try
@@ -438,7 +439,7 @@ namespace GradeMe3.InstructorProject
         }
 
         [HttpPost("team-update")]
-        [AllowAnonymous]
+        [Authorize(Policy = GradeMePolicies.Instructor)]
         public IActionResult TeamUpdate([FromBody] TeamCreateRequest request)
         {
             try
@@ -500,7 +501,7 @@ namespace GradeMe3.InstructorProject
         }
 
         [HttpPost("team-delete")]
-        [AllowAnonymous]
+        [Authorize(Policy = GradeMePolicies.Instructor)]
         public IActionResult TeamDelete([FromBody] TeamDeleteRequest request)
         {
             try
@@ -548,6 +549,71 @@ namespace GradeMe3.InstructorProject
                             return new BadRequestObjectResult(transExc);
                         }
                     }
+                }
+            }
+            catch (Exception exc)
+            {
+                return new BadRequestObjectResult(exc);
+            }
+        }
+
+        [HttpPost("results-fetch")]
+        [Authorize(Policy = GradeMePolicies.Instructor)]
+        public IActionResult ResultsFetch([FromBody] ResultsRequest request)
+        {
+            try
+            {
+                using (var db = new GradeMeContext())
+                {
+                    var userId = this.GetApplicationUserId();
+                    var user = db.ApplicationUsers
+                        .Include(x => x.Instructors)
+                        .FirstOrDefault(x => x.Id == userId);
+                    if (null == user)
+                    {
+                        return new UnauthorizedResult();
+                    }
+                    if (!user.IsInstructor && !user.IsAdministrator)
+                    {
+                        return new BadRequestObjectResult(new ProjectResultsInfo()
+                        {
+                            ErrorMessage = "The user is neither instructor nor administrator and cannot request results."
+                        });
+                    }
+                    var project = db.Projects.SingleOrDefault(p => p.Id == request.ProjectId);
+                    if (null == project)
+                    {
+                        return new BadRequestObjectResult(new ProjectResultsInfo()
+                        {
+                            ErrorMessage = "Unknown project."
+                        });
+                    }
+                    var studentsInProject = db.StudentsInProject
+                        .Include(x => x.Team)
+                        .Include(x => x.Student)
+                        .ThenInclude(x => x.ApplicationUser)
+                        .Where(x => x.ProjectId == project.Id)
+                        .ToList();
+                    var studentIds = studentsInProject.Select(x => x.StudentId).Distinct();
+                    var byEvaluator = db.Evaluations
+                        .Where(x => studentIds.Contains(x.EvaluatorStudentId))
+                        .GroupBy(x => x.EvaluatorStudentId)
+                        .ToList();
+                    var byEvaluated = byEvaluator
+                        .SelectMany(g => g
+                            .GroupBy(z => z.EvaluatedStudentId)).ToList();
+                    var latest = byEvaluated
+                        .Select(EvaluationHelper.LatestEvaluation)
+                        .ToList();
+
+                    return new OkObjectResult(new ProjectResultsInfo()
+                    {
+                        StudentsInProject = studentsInProject,
+                        Students = studentsInProject.Select(x => x.Student).ToList(),
+                        ApplicationUsers = studentsInProject.Select(x => x.Student.ApplicationUser).ToList(),
+                        Teams = studentsInProject.Select(x => x.Team).ToList(),
+                        Evaluations = latest
+                    });
                 }
             }
             catch (Exception exc)

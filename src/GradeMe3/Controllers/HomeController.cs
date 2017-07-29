@@ -19,7 +19,7 @@ namespace GradeMe3.Controllers
         }
 
         [HttpPost("fetch-all")]
-        [AllowAnonymous]
+        [Authorize(Policy = GradeMePolicies.Instructor)]
         public IActionResult HomeFetchAll([FromBody] UserDataRequest request)
         {
             try
@@ -50,40 +50,27 @@ namespace GradeMe3.Controllers
 
         private HomeData GetHomeData(GradeMeContext db, ApplicationUser user)
         {
-            var reply = new HomeData();
-            var userCourses = new List<Course>();
-            if (user.IsInstructor)
-            {
-                var courses = db.Courses.Include(x => x.Instructors).ToList();
-                courses = courses
-                    .Where(c => c.Instructors.ToList().Exists(i => i.ApplicationUserId == user.Id))
-                    .ToList();
-                reply.InstructorCourses = courses;
-                userCourses.AddRange(courses);
-            }
-            if (user.IsStudent)
-            {
-                var courses = db.Courses.Include(x => x.Students).ToList();
-                courses = courses
-                    .Where(c => c.Students.ToList().Exists(s => s.ApplicationUserId == user.Id))
-                    .ToList();
-                reply.StudentCourses = courses;
-                userCourses.AddRange(courses);
-            }
+            var reply = new HomeData();                        
             if (user.IsAdministrator)
             {
                 var courses = db.Courses.ToList();
-                reply.Courses = courses;
-                userCourses.AddRange(courses);
+                reply.Courses = courses;            
+            } else
+            {
+                if (user.IsInstructor)
+                {
+                    var courses = db.Courses.Include(x => x.Instructors).ToList();
+                    courses = courses
+                        .Where(c => c.Instructors.ToList().Exists(i => i.ApplicationUserId == user.Id))
+                        .ToList();
+                    reply.Courses = courses;
+                }
             }
-            reply.OtherCourses = db.Courses.ToList()
-                .Except(userCourses, new IdComparer<Course>())
-                .ToList();
             return reply;
         }
 
         [HttpPost("course-add")]
-        [AllowAnonymous]
+        [Authorize(Policy = GradeMePolicies.Instructor)]
         public IActionResult CourseAdd([FromBody] CourseAddRequest request)
         {
             try
@@ -152,7 +139,7 @@ namespace GradeMe3.Controllers
         }
 
         [HttpPost("course-remove")]
-        [AllowAnonymous]
+        [Authorize(Policy = GradeMePolicies.Instructor)]
         public IActionResult CourseRemove([FromBody] CourseRemoveRequest request)
         {
             try
@@ -180,7 +167,7 @@ namespace GradeMe3.Controllers
                         .Where(c => request.CourseIds.Contains(c.Id))                        
                         .ToList();
                     // User can remove courses where he is an instructor
-                    if (user.IsAdministrator)
+                    if (!user.IsAdministrator)
                     {
                         courses = courses.Where(c => c.Instructors.Exists(i => i.ApplicationUserId == user.Id)).ToList();
                     }
@@ -209,7 +196,7 @@ namespace GradeMe3.Controllers
         }
 
         [HttpPost("course-update")]
-        [AllowAnonymous]
+        [Authorize(Policy = GradeMePolicies.Instructor)]
         public IActionResult CourseUpdate([FromBody] CourseAddRequest request)
         {
             try

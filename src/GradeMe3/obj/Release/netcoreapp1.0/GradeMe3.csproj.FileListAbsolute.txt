@@ -1,0 +1,9 @@
+C:\Users\Rustam\Projects\GradeMe3\src\GradeMe3\bin\Release\netcoreapp1.0\GradeMe3.deps.json
+C:\Users\Rustam\Projects\GradeMe3\src\GradeMe3\bin\Release\netcoreapp1.0\GradeMe3.runtimeconfig.json
+C:\Users\Rustam\Projects\GradeMe3\src\GradeMe3\bin\Release\netcoreapp1.0\GradeMe3.runtimeconfig.dev.json
+C:\Users\Rustam\Projects\GradeMe3\src\GradeMe3\bin\Release\netcoreapp1.0\GradeMe3.dll
+C:\Users\Rustam\Projects\GradeMe3\src\GradeMe3\bin\Release\netcoreapp1.0\GradeMe3.pdb
+C:\Users\Rustam\Projects\GradeMe3\src\GradeMe3\obj\Release\netcoreapp1.0\GradeMe3.csprojResolveAssemblyReference.cache
+C:\Users\Rustam\Projects\GradeMe3\src\GradeMe3\obj\Release\netcoreapp1.0\GradeMe3.AssemblyInfo.cs
+C:\Users\Rustam\Projects\GradeMe3\src\GradeMe3\obj\Release\netcoreapp1.0\GradeMe3.dll
+C:\Users\Rustam\Projects\GradeMe3\src\GradeMe3\obj\Release\netcoreapp1.0\GradeMe3.pdb
