@@ -10,6 +10,7 @@ using GradeMe3.Teams;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.PlatformAbstractions;
+using GradeMe3.InstructorProject;
 
 namespace GradeMe3.Database
 {
@@ -25,6 +26,7 @@ namespace GradeMe3.Database
         public DbSet<Instructor> Instructors { get; set; }
         public DbSet<Evaluation> Evaluations { get; set; }
         public DbSet<Mailbox> Mailboxes { get; set; }
+        public DbSet<EvaluationApproval> EvaluationApprovals { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -128,6 +130,13 @@ namespace GradeMe3.Database
             modelBuilder.Entity<Evaluation>()
                 .HasOne(x => x.Project)
                 .WithMany(x => x.Evaluations)
+                .IsRequired()
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<EvaluationApproval>()
+                .HasOne(x => x.Instructor)
+                .WithMany(x => x.Approvals)
+                .HasForeignKey(x => x.InstructorId)
                 .IsRequired()
                 .OnDelete(DeleteBehavior.Cascade);
         }

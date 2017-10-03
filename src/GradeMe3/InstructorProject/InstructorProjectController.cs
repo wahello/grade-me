@@ -622,6 +622,61 @@ namespace GradeMe3.InstructorProject
             }
         }
 
+        //[HttpPost("evaluation-approve")]
+        //[Authorize(Policy = GradeMePolicies.Instructor)]
+        //public IActionResult EvaluationApprove([FromBody] EvaluationApproval approval)
+        //{
+        //    try
+        //    {
+        //        using (var db = new GradeMeContext())
+        //        {
+        //            var userId = this.GetApplicationUserId();
+        //            var user = db.ApplicationUsers
+        //                .Include(x => x.Instructors)
+        //                .FirstOrDefault(x => x.Id == userId);
+        //            if (null == user)
+        //            {
+        //                return new UnauthorizedResult();
+        //            }
+        //            if (!user.IsInstructor && !user.IsAdministrator)
+        //            {
+        //                return new BadRequestObjectResult(new ProjectData()
+        //                {
+        //                    ErrorMessage = "The user is neither instructor nor administrator and cannot approve evaluations."
+        //                });
+        //            }
+        //            var evaluation = db.Evaluations.SingleOrDefault(x => x.Id == approval.EvaluationId);
+        //            if (null == evaluation)
+        //            {
+        //                return new BadRequestObjectResult(new ProjectData()
+        //                {
+        //                    ErrorMessage = "Unknown evaluation."
+        //                });
+        //            }
+        //            using (var transaction = db.Database.BeginTransaction())
+        //            {
+        //                try
+        //                {
+        //                    db.EvaluationApprovals.Add(approval);
+        //                    db.SaveChanges();
+        //                    transaction.Commit();
+        //                    var reply = GetProjectData(db, user, project.Id);
+        //                    return new OkObjectResult(reply);
+        //                }
+        //                catch (Exception transExc)
+        //                {
+        //                    transaction.Rollback();
+        //                    return new BadRequestObjectResult(transExc);
+        //                }
+        //            }
+        //        }
+        //    }
+        //    catch (Exception exc)
+        //    {
+        //        return new BadRequestObjectResult(exc);
+        //    }
+        //}
+
         private ProjectData GetProjectData(GradeMeContext db, ApplicationUser user, string ProjectId)
         {
             var reply = new ProjectData();

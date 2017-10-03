@@ -16,6 +16,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace GradeMe3
 {
@@ -39,21 +40,22 @@ namespace GradeMe3
                 builder.AddApplicationInsightsSettings(developerMode: true);
             }
 
-            using (var db = new GradeMeContext())
-            {
-                db.Database.EnsureCreated();
-                try
-                {
-                    var admin = db.ApplicationUsers.SingleOrDefault(x => x.UserName == "rustam");
-                    if (null == admin)
-                    {
-                        db.SeedData();
-                    }                    
-                }
-                catch (Exception exc)
-                {                    
-                }
-            }
+            // Moved to Program.Main
+            //using (var db = new GradeMeContext())
+            //{
+            //    db.Database.EnsureCreated();
+            //    try
+            //    {
+            //        var admin = db.ApplicationUsers.SingleOrDefault(x => x.UserName == "rustam");
+            //        if (null == admin)
+            //        {
+            //            db.SeedData();
+            //        }                    
+            //    }
+            //    catch (Exception exc)
+            //    {                    
+            //    }
+            //}
 
             builder.AddEnvironmentVariables();
             Configuration = builder.Build();
@@ -66,6 +68,7 @@ namespace GradeMe3
         {
             services.AddApplicationInsightsTelemetry(Configuration);
             services.AddEntityFrameworkSqlite().AddDbContext<GradeMeContext>();
+
             services.AddMvc(config =>
             {
                 var policy = new AuthorizationPolicyBuilder()
@@ -80,13 +83,38 @@ namespace GradeMe3
 
             services.AddRouting();
             services.AddOptions();
+
             var jwtAppSettingOptions = Configuration.GetSection(nameof(JwtIssuerOptions));
+
             services.Configure<JwtIssuerOptions>(options =>
             {
                 options.Issuer = jwtAppSettingOptions[nameof(JwtIssuerOptions.Issuer)];
                 options.Audience = jwtAppSettingOptions[nameof(JwtIssuerOptions.Audience)];
                 options.SigningCredentials = new SigningCredentials(_signingKey, SecurityAlgorithms.HmacSha256);
             });
+
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(options =>
+                {
+                    options.RequireHttpsMetadata = false;
+                    options.SaveToken = true;
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidIssuer = jwtAppSettingOptions[nameof(JwtIssuerOptions.Issuer)],
+
+                        ValidateAudience = true,
+                        ValidAudience = jwtAppSettingOptions[nameof(JwtIssuerOptions.Audience)],
+
+                        ValidateIssuerSigningKey = true,
+                        IssuerSigningKey = _signingKey,
+
+                        RequireExpirationTime = true,
+                        ValidateLifetime = true,
+
+                        ClockSkew = TimeSpan.Zero
+                    };
+                });
 
             services.AddAuthorization(options =>
             {
@@ -107,35 +135,45 @@ namespace GradeMe3
         {
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
-            var jwtAppSettingOptions = Configuration.GetSection(nameof(JwtIssuerOptions));
-            var tokenValidationParameters = new TokenValidationParameters
+            if (env.IsDevelopment())
             {
-                ValidateIssuer = true,
-                ValidIssuer = jwtAppSettingOptions[nameof(JwtIssuerOptions.Issuer)],
-
-                ValidateAudience = true,
-                ValidAudience = jwtAppSettingOptions[nameof(JwtIssuerOptions.Audience)],
-
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = _signingKey,
-
-                RequireExpirationTime = true,
-                ValidateLifetime = true,
-
-                ClockSkew = TimeSpan.Zero
-            };
-            app.UseApplicationInsightsRequestTelemetry();
-            app.UseApplicationInsightsExceptionTelemetry();
-            app.UseJwtBearerAuthentication(new JwtBearerOptions
+                app.UseDeveloperExceptionPage();
+                app.UseDatabaseErrorPage();
+                app.UseBrowserLink();
+            }
+            else
             {
-                AutomaticAuthenticate = true,
-                AutomaticChallenge = true,
-                TokenValidationParameters = tokenValidationParameters
-            });
+                app.UseExceptionHandler("/Home/Error");
+            }
 
+            //var jwtAppSettingOptions = Configuration.GetSection(nameof(JwtIssuerOptions));
+            //var tokenValidationParameters = new TokenValidationParameters
+            //{
+            //    ValidateIssuer = true,
+            //    ValidIssuer = jwtAppSettingOptions[nameof(JwtIssuerOptions.Issuer)],
+
+            //    ValidateAudience = true,
+            //    ValidAudience = jwtAppSettingOptions[nameof(JwtIssuerOptions.Audience)],
+
+            //    ValidateIssuerSigningKey = true,
+            //    IssuerSigningKey = _signingKey,
+
+            //    RequireExpirationTime = true,
+            //    ValidateLifetime = true,
+
+            //    ClockSkew = TimeSpan.Zero
+            //};
+            //app.UseApplicationInsightsRequestTelemetry();
+            //app.UseApplicationInsightsExceptionTelemetry();
+            //app.UseJwtBearerAuthentication(new JwtBearerOptions
+            //{
+            //    TokenValidationParameters = tokenValidationParameters
+            //});
+            app.UseStaticFiles();
             app.UseMvc();
             app.UseDefaultFiles();
-            app.UseStaticFiles();
+            app.UseAuthentication();
+            
             // For ReactJS application to work index.html needs to be served on all paths except /api/*
             var routeBuilder = new RouteBuilder(app);
             routeBuilder.MapGet("{*path}", context => context.Response.SendFileAsync(@"wwwroot\index.html"));

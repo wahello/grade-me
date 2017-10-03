@@ -2,6 +2,7 @@
 using GradeMe3.Auth;
 using GradeMe3.Courses;
 using Newtonsoft.Json;
+using GradeMe3.InstructorProject;
 
 namespace GradeMe3.Instructors
 {
@@ -14,5 +15,7 @@ namespace GradeMe3.Instructors
         public ApplicationUser ApplicationUser { get; set; }
         [JsonIgnore]
         public Course Course { get; set; }
+        [JsonIgnore]
+        public IEnumerable<EvaluationApproval> Approvals { get; set; }
     }
 }
