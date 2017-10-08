@@ -119,6 +119,11 @@ namespace GradeMe3
             services.AddAuthorization(options =>
             {
                 options.AddPolicy(
+                    "Bearer",
+                    new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme)
+                    .RequireAuthenticatedUser()
+                    .Build());
+                options.AddPolicy(
                     GradeMePolicies.Administrator,
                     policy => policy.RequireClaim(GradeMePolicies.Administrator));
                 options.AddPolicy(
@@ -168,11 +173,11 @@ namespace GradeMe3
             //app.UseJwtBearerAuthentication(new JwtBearerOptions
             //{
             //    TokenValidationParameters = tokenValidationParameters
-            //});
+            //});            
+            app.UseAuthentication();
             app.UseStaticFiles();
             app.UseMvc();
-            app.UseDefaultFiles();
-            app.UseAuthentication();
+            app.UseDefaultFiles();            
             
             // For ReactJS application to work index.html needs to be served on all paths except /api/*
             var routeBuilder = new RouteBuilder(app);

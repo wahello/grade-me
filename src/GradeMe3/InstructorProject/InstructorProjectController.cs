@@ -12,6 +12,10 @@ using GradeMe3.Students;
 using GradeMe3.Teams;
 using System.Text;
 using GradeMe3.Evaluations;
+using GradeMe3.Emails;
+using MimeKit;
+using MailKit.Net.Smtp;
+using MailKit.Security;
 
 namespace GradeMe3.InstructorProject
 {
@@ -622,60 +626,61 @@ namespace GradeMe3.InstructorProject
             }
         }
 
-        //[HttpPost("evaluation-approve")]
-        //[Authorize(Policy = GradeMePolicies.Instructor)]
-        //public IActionResult EvaluationApprove([FromBody] EvaluationApproval approval)
-        //{
-        //    try
-        //    {
-        //        using (var db = new GradeMeContext())
-        //        {
-        //            var userId = this.GetApplicationUserId();
-        //            var user = db.ApplicationUsers
-        //                .Include(x => x.Instructors)
-        //                .FirstOrDefault(x => x.Id == userId);
-        //            if (null == user)
-        //            {
-        //                return new UnauthorizedResult();
-        //            }
-        //            if (!user.IsInstructor && !user.IsAdministrator)
-        //            {
-        //                return new BadRequestObjectResult(new ProjectData()
-        //                {
-        //                    ErrorMessage = "The user is neither instructor nor administrator and cannot approve evaluations."
-        //                });
-        //            }
-        //            var evaluation = db.Evaluations.SingleOrDefault(x => x.Id == approval.EvaluationId);
-        //            if (null == evaluation)
-        //            {
-        //                return new BadRequestObjectResult(new ProjectData()
-        //                {
-        //                    ErrorMessage = "Unknown evaluation."
-        //                });
-        //            }
-        //            using (var transaction = db.Database.BeginTransaction())
-        //            {
-        //                try
-        //                {
-        //                    db.EvaluationApprovals.Add(approval);
-        //                    db.SaveChanges();
-        //                    transaction.Commit();
-        //                    var reply = GetProjectData(db, user, project.Id);
-        //                    return new OkObjectResult(reply);
-        //                }
-        //                catch (Exception transExc)
-        //                {
-        //                    transaction.Rollback();
-        //                    return new BadRequestObjectResult(transExc);
-        //                }
-        //            }
-        //        }
-        //    }
-        //    catch (Exception exc)
-        //    {
-        //        return new BadRequestObjectResult(exc);
-        //    }
-        //}
+        //TODO Return something smaller. Don't need to reload the entire ProjectData every time.
+        [HttpPost("evaluation-approve")]
+        [Authorize(Policy = GradeMePolicies.Instructor)]
+        public IActionResult EvaluationApprove([FromBody] EvaluationApproval approval)
+        {
+            try
+            {
+                using (var db = new GradeMeContext())
+                {
+                    var userId = this.GetApplicationUserId();
+                    var user = db.ApplicationUsers
+                        .Include(x => x.Instructors)
+                        .FirstOrDefault(x => x.Id == userId);
+                    if (null == user)
+                    {
+                        return new UnauthorizedResult();
+                    }
+                    if (!user.IsInstructor && !user.IsAdministrator)
+                    {
+                        return new BadRequestObjectResult(new ProjectData()
+                        {
+                            ErrorMessage = "The user is neither instructor nor administrator and cannot approve evaluations."
+                        });
+                    }
+                    var evaluation = db.Evaluations.SingleOrDefault(x => x.Id == approval.EvaluationId);
+                    if (null == evaluation)
+                    {
+                        return new BadRequestObjectResult(new ProjectData()
+                        {
+                            ErrorMessage = "Unknown evaluation."
+                        });
+                    }
+                    using (var transaction = db.Database.BeginTransaction())
+                    {
+                        try
+                        {
+                            db.EvaluationApprovals.Add(approval);
+                            db.SaveChanges();
+                            transaction.Commit();
+                            var reply = GetProjectData(db, user, evaluation.ProjectId);
+                            return new OkObjectResult(reply);
+                        }
+                        catch (Exception transExc)
+                        {
+                            transaction.Rollback();
+                            return new BadRequestObjectResult(transExc);
+                        }
+                    }
+                }
+            }
+            catch (Exception exc)
+            {
+                return new BadRequestObjectResult(exc);
+            }
+        }
 
         private ProjectData GetProjectData(GradeMeContext db, ApplicationUser user, string ProjectId)
         {
@@ -721,6 +726,52 @@ namespace GradeMe3.InstructorProject
                 ApplicationUsers = applicationUsers.ToList(),
                 Teams = teams.ToList()
             };
+        }
+
+        [HttpPost("emails-send")]
+        [Authorize(Policy = GradeMePolicies.Administrator)]
+        public IActionResult EmailsSend([FromBody] EmailSendRequest emailSendRequest)
+        {
+            try
+            {
+                var emailMessages = emailSendRequest.Letters.Select(letter =>
+                {
+                    var text = letter.Text.Replace("\r\n", "\n");
+                    text = text.Replace("\n", Environment.NewLine);
+                    var emailMessage = new MimeMessage();
+                    emailMessage.From.Add(
+                        new MimeKit.MailboxAddress(
+                            letter.From.Name,
+                            letter.From.EmailAddress));
+                    emailMessage.To.Add(
+                        new MimeKit.MailboxAddress(
+                            letter.To.Name,
+                            letter.To.EmailAddress));
+                    emailMessage.Subject = letter.Subject;
+                    emailMessage.Body = new TextPart("plain") { Text = text };
+                    return emailMessage;
+                });
+                using (var client = new SmtpClient())
+                {
+                    client.ServerCertificateValidationCallback = (s, c, h, e) => true;
+                    client.Connect(
+                        emailSendRequest.SmtpUrl,
+                        emailSendRequest.SmtpPort,
+                        SecureSocketOptions.Auto);
+                    client.Authenticate(emailSendRequest.SmtpUserName, emailSendRequest.SmtpPassword);
+                    foreach (var emailMessage in emailMessages)
+                    {
+                        //Thread.Sleep(TimeSpan.FromSeconds(10));
+                        client.Send(emailMessage);
+                    }
+                    client.Disconnect(true);
+                }
+                return new OkResult();
+            }
+            catch (Exception exc)
+            {
+                return new BadRequestObjectResult(exc);
+            }
         }
     }
 }
